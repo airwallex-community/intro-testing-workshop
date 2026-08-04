@@ -1,0 +1,17 @@
+__pycache__/
+*.py[co]
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.json
+htmlcov/
+.venv/
+venv/
+.DS_Store
+.idea/
+.vscode/
+
+# Scoring pipeline scratch directories
+.pristine/
+baseline/
+break-results/
