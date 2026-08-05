@@ -4,7 +4,7 @@ name: Score
 # immediately, then runs the student's tests against 30 broken versions of the
 # six functions and posts the break-detection scores.
 #
-# Required secrets:  LEADERBOARD_URL, LEADERBOARD_API_KEY, BUGGY_REPO_DEPLOY_KEY
+# Required secrets:  LEADERBOARD_URL, LEADERBOARD_API_KEY, BUGGY_REPO_DEPLOY_KEY, LEADERBOARD_DEPLOY_KEY
 # Optional vars:     PROJECT_ID, PIPELINE_REF, BUGGY_REPO, LEADERBOARD_REPO
 
 on:
@@ -101,6 +101,7 @@ jobs:
         with:
           repository: ${{ vars.LEADERBOARD_REPO || 'airwallex-community/intro-testing-workshop-leaderboard' }}
           ref: ${{ vars.PIPELINE_REF || 'pipeline-v1' }}
+          ssh-key: ${{ secrets.LEADERBOARD_DEPLOY_KEY }}
           path: leaderboard
 
       - name: Check out the broken versions
