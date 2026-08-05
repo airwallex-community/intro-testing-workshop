@@ -1,0 +1,272 @@
+name: Score
+
+# Runs on every push to a student branch. Posts coverage to the leaderboard
+# immediately, then runs the student's tests against 30 broken versions of the
+# six functions and posts the break-detection scores.
+#
+# Required secrets:  LEADERBOARD_URL, LEADERBOARD_API_KEY, BUGGY_REPO_DEPLOY_KEY
+# Optional vars:     PROJECT_ID, PIPELINE_REF, BUGGY_REPO, LEADERBOARD_REPO
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - master
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+  workflow_dispatch:
+    inputs:
+      student:
+        description: 'Override the student name (defaults to the branch name)'
+        required: false
+
+# Students push frequently. Without this, each push queues another 37 pytest
+# runs behind the last one.
+concurrency:
+  group: score-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  score:
+    # Forks never receive secrets, so a forked run would silently score nothing.
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PROJECT_ID: ${{ vars.PROJECT_ID || 'wit-workshop-2026' }}
+      BRANCH_NAME: ${{ github.ref_name }}
+      STUDENT_OVERRIDE: ${{ github.event.inputs.student }}
+      FALLBACK_ACTOR: ${{ github.actor }}
+
+    steps:
+      - name: Resolve student name
+        id: who
+        run: |
+          set -uo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import os, re, sys
+
+          raw = (os.environ.get("STUDENT_OVERRIDE") or "").strip()
+          source = "workflow_dispatch input"
+          if not raw:
+              raw = (os.environ.get("BRANCH_NAME") or "").strip()
+              source = "branch name"
+          if not raw:
+              raw = (os.environ.get("FALLBACK_ACTOR") or "").strip()
+              source = "github.actor"
+
+          name = raw.lower().replace("/", "-")
+          name = re.sub(r"[^a-z0-9._-]+", "-", name).strip("-")
+
+          RESERVED = {
+              "", "main", "master", "head", "develop",
+              "feature-branch-1", "feature-branch-2", "feature-branch-3",
+              "feature-branch-4", "test", "temp", "tmp",
+          }
+          skip = name in RESERVED
+          print(f"student={name}")
+          print(f"source={source}")
+          print(f"skip={'true' if skip else 'false'}")
+          print(f"Resolved student '{name}' from {source}", file=sys.stderr)
+          PY
+
+      - name: Skip run for a reserved branch name
+        if: steps.who.outputs.skip == 'true'
+        run: |
+          {
+            echo "### Scoring skipped"
+            echo
+            echo "Branch \`$BRANCH_NAME\` is a reserved name, so this run was not scored."
+            echo "Push to a branch named after yourself (e.g. \`ada-lovelace\`) — your"
+            echo "branch name is the name shown on the leaderboard."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check out the student's work
+        if: steps.who.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          path: app
+
+      # The transform scripts live with the API contract they target, so the
+      # payload shape and the endpoint schema always change together. Pinned to
+      # a tag: a commit on the leaderboard repo must not break 30 students at once.
+      - name: Check out the pipeline scripts
+        if: steps.who.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.LEADERBOARD_REPO || 'airwallex-community/intro-testing-workshop-leaderboard' }}
+          ref: ${{ vars.PIPELINE_REF || 'pipeline-v1' }}
+          path: leaderboard
+
+      - name: Check out the broken versions
+        if: steps.who.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.BUGGY_REPO || 'airwallex-community/intro-testing-workshop-buggy-functions' }}
+          ssh-key: ${{ secrets.BUGGY_REPO_DEPLOY_KEY }}
+          path: buggy
+
+      - name: Set up Python
+        if: steps.who.outputs.skip != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: app/requirements.txt
+
+      - name: Install dependencies
+        if: steps.who.outputs.skip != 'true'
+        run: pip install -r app/requirements.txt
+
+      # Restoring from a snapshot rather than `git checkout` avoids quoting
+      # hazards with the colon in the directory names, works on a dirty tree,
+      # and can be verified with cmp.
+      - name: Snapshot the correct implementations
+        if: steps.who.outputs.skip != 'true'
+        working-directory: app
+        run: |
+          set -euo pipefail
+          mkdir -p .pristine
+          while IFS=$'\t' read -r DIR FUNC; do
+            cp "$DIR/$FUNC.py" ".pristine/$FUNC.py"
+          done < <(python3 ../leaderboard/pipeline/functions.py --tsv)
+          ls -1 .pristine
+
+      - name: Run tests with coverage
+        if: steps.who.outputs.skip != 'true'
+        working-directory: app
+        run: |
+          set -uo pipefail
+          python -m pytest --cov --cov-report=json:coverage.json -q || true
+          test -f coverage.json
+
+      # Coverage is the live workshop view, so it is posted before the slow part.
+      # If break detection dies, the student is still on the board.
+      - name: Submit coverage
+        if: steps.who.outputs.skip != 'true'
+        working-directory: app
+        env:
+          API_KEY: ${{ secrets.LEADERBOARD_API_KEY }}
+          LEADERBOARD_URL: ${{ secrets.LEADERBOARD_URL }}
+          STUDENT: ${{ steps.who.outputs.student }}
+        run: |
+          set -uo pipefail
+          python3 ../leaderboard/pipeline/extract_coverage.py \
+            coverage.json "$STUDENT" "$PROJECT_ID" --allow-missing > coverage_payload.json
+          curl --fail-with-body --silent --show-error --retry 3 --retry-delay 2 \
+            -X POST "$LEADERBOARD_URL/coverage" \
+            -H "Authorization: Bearer $API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @coverage_payload.json
+
+      # Baselines: the student's tests against the CORRECT code, one run per
+      # function with flags identical to the break runs so nodeids compare.
+      # Only tests that pass here are eligible to score a break.
+      - name: Record baselines
+        if: steps.who.outputs.skip != 'true'
+        working-directory: app
+        run: |
+          set -uo pipefail
+          mkdir -p baseline
+          while IFS=$'\t' read -r DIR FUNC; do
+            echo "::group::baseline $FUNC"
+            python -m pytest "$DIR/" \
+              -p no:cacheprovider \
+              --timeout=15 --timeout-method=thread \
+              --report-log="baseline/$FUNC.jsonl" -q || true
+            echo "::endgroup::"
+          done < <(python3 ../leaderboard/pipeline/functions.py --tsv)
+
+      - name: Run break detection
+        if: steps.who.outputs.skip != 'true'
+        working-directory: app
+        run: |
+          set -uo pipefail
+          mkdir -p break-results
+
+          # Versions are named after the defect they introduce, so the list comes
+          # from the manifest. Nothing here echoes a version name: this log is
+          # visible to the student, and the names are the answers.
+          CASE=0
+          LAST_FUNC=""
+          while IFS=$'\t' read -r DIR FUNC VERSION; do
+            if [ "$FUNC" != "$LAST_FUNC" ]; then CASE=0; LAST_FUNC="$FUNC"; fi
+            CASE=$((CASE + 1))
+            echo "::group::$FUNC — case $CASE of 5"
+
+            cp "../buggy/functions/$FUNC/$VERSION.py" "$DIR/$FUNC.py"
+
+            python -m pytest "$DIR/" \
+              -p no:cacheprovider \
+              --timeout=15 --timeout-method=thread \
+              --report-log="break-results/$FUNC-$VERSION.jsonl" -q 2>&1 \
+              | sed "s/$VERSION/[case $CASE]/g" || true
+
+            cp ".pristine/$FUNC.py" "$DIR/$FUNC.py"
+            if ! cmp -s ".pristine/$FUNC.py" "$DIR/$FUNC.py"; then
+              echo "::error::failed to restore $DIR/$FUNC.py — aborting"
+              exit 1
+            fi
+            echo "::endgroup::"
+          done < <(python3 ../leaderboard/pipeline/functions.py --runs)
+
+      - name: Submit scores
+        if: steps.who.outputs.skip != 'true'
+        working-directory: app
+        env:
+          API_KEY: ${{ secrets.LEADERBOARD_API_KEY }}
+          LEADERBOARD_URL: ${{ secrets.LEADERBOARD_URL }}
+          STUDENT: ${{ steps.who.outputs.student }}
+        run: |
+          set -uo pipefail
+          # stderr carries the running total and the names of any unscoreable
+          # versions. Both are answers, and this log is readable by the student,
+          # so it goes to a file that is never uploaded. The student gets the
+          # redacted step summary; organisers read the API after the reveal.
+          python3 ../leaderboard/pipeline/aggregate_results.py \
+            break-results/ "$STUDENT" "$PROJECT_ID" \
+            --baseline-dir baseline/ \
+            --diagnostics diagnostics.json \
+            > scores_payload.json 2> aggregate.log \
+            || { echo "::error::aggregate_results failed"; exit 1; }
+          curl --fail-with-body --silent --show-error --retry 3 --retry-delay 2 \
+            -X POST "$LEADERBOARD_URL/scores" \
+            -H "Authorization: Bearer $API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @scores_payload.json
+
+      - name: Summarise
+        if: always() && steps.who.outputs.skip != 'true'
+        working-directory: app
+        env:
+          STUDENT: ${{ steps.who.outputs.student }}
+        run: |
+          set -uo pipefail
+          python3 ../leaderboard/pipeline/summarise.py \
+            --student "$STUDENT" \
+            --coverage coverage_payload.json \
+            --scores scores_payload.json \
+            --diagnostics diagnostics.json >> "$GITHUB_STEP_SUMMARY" || \
+            echo "Could not build a summary for this run." >> "$GITHUB_STEP_SUMMARY"
+
+      # Coverage only. Artifacts are downloadable by anyone who can read the
+      # repo, which includes the students — and break-results filenames,
+      # scores_payload.json and diagnostics.json all carry version ids, which are
+      # named after the defects. Organisers read the break detail from the API
+      # after the reveal instead.
+      - name: Upload coverage artifact
+        if: always() && steps.who.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ steps.who.outputs.student }}-${{ github.run_id }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            app/coverage.json
+            app/coverage_payload.json
+            app/baseline/

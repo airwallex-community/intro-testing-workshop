@@ -1,0 +1,16 @@
+[run]
+branch = True
+source =
+    Function 1: Receive Contribution
+    Function 2: Calculate Interest
+    Function 3: Categorise Transaction
+    Function 4: Transfer Funds
+    Function 5: Apply Transaction
+    Function 6: Process Batch Transactions
+
+omit =
+    */test_*.py
+    */conftest.py
+
+[report]
+show_missing = True
