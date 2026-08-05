@@ -188,25 +188,32 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p break-results
-          while IFS=$'\t' read -r DIR FUNC; do
-            for VERSION in v1 v2 v3 v4 v5; do
-              echo "::group::$FUNC $VERSION"
-              SRC="../buggy/functions/$FUNC/$VERSION.py"
-              cp "$SRC" "$DIR/$FUNC.py"
 
-              python -m pytest "$DIR/" \
-                -p no:cacheprovider \
-                --timeout=15 --timeout-method=thread \
-                --report-log="break-results/$FUNC-$VERSION.jsonl" -q || true
+          # Versions are named after the defect they introduce, so the list comes
+          # from the manifest. Nothing here echoes a version name: this log is
+          # visible to the student, and the names are the answers.
+          CASE=0
+          LAST_FUNC=""
+          while IFS=$'\t' read -r DIR FUNC VERSION; do
+            if [ "$FUNC" != "$LAST_FUNC" ]; then CASE=0; LAST_FUNC="$FUNC"; fi
+            CASE=$((CASE + 1))
+            echo "::group::$FUNC — case $CASE of 5"
 
-              cp ".pristine/$FUNC.py" "$DIR/$FUNC.py"
-              if ! cmp -s ".pristine/$FUNC.py" "$DIR/$FUNC.py"; then
-                echo "::error::failed to restore $DIR/$FUNC.py — aborting"
-                exit 1
-              fi
-              echo "::endgroup::"
-            done
-          done < <(python3 ../leaderboard/pipeline/functions.py --tsv)
+            cp "../buggy/functions/$FUNC/$VERSION.py" "$DIR/$FUNC.py"
+
+            python -m pytest "$DIR/" \
+              -p no:cacheprovider \
+              --timeout=15 --timeout-method=thread \
+              --report-log="break-results/$FUNC-$VERSION.jsonl" -q 2>&1 \
+              | sed "s/$VERSION/[case $CASE]/g" || true
+
+            cp ".pristine/$FUNC.py" "$DIR/$FUNC.py"
+            if ! cmp -s ".pristine/$FUNC.py" "$DIR/$FUNC.py"; then
+              echo "::error::failed to restore $DIR/$FUNC.py — aborting"
+              exit 1
+            fi
+            echo "::endgroup::"
+          done < <(python3 ../leaderboard/pipeline/functions.py --runs)
 
       - name: Submit scores
         if: steps.who.outputs.skip != 'true'
@@ -217,10 +224,16 @@ jobs:
           STUDENT: ${{ steps.who.outputs.student }}
         run: |
           set -uo pipefail
+          # stderr carries the running total and the names of any unscoreable
+          # versions. Both are answers, and this log is readable by the student,
+          # so it goes to a file that is never uploaded. The student gets the
+          # redacted step summary; organisers read the API after the reveal.
           python3 ../leaderboard/pipeline/aggregate_results.py \
             break-results/ "$STUDENT" "$PROJECT_ID" \
             --baseline-dir baseline/ \
-            --diagnostics diagnostics.json > scores_payload.json
+            --diagnostics diagnostics.json \
+            > scores_payload.json 2> aggregate.log \
+            || { echo "::error::aggregate_results failed"; exit 1; }
           curl --fail-with-body --silent --show-error --retry 3 --retry-delay 2 \
             -X POST "$LEADERBOARD_URL/scores" \
             -H "Authorization: Bearer $API_KEY" \
@@ -241,18 +254,19 @@ jobs:
             --diagnostics diagnostics.json >> "$GITHUB_STEP_SUMMARY" || \
             echo "Could not build a summary for this run." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload run artifacts
+      # Coverage only. Artifacts are downloadable by anyone who can read the
+      # repo, which includes the students — and break-results filenames,
+      # scores_payload.json and diagnostics.json all carry version ids, which are
+      # named after the defects. Organisers read the break detail from the API
+      # after the reveal instead.
+      - name: Upload coverage artifact
         if: always() && steps.who.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: scoring-${{ steps.who.outputs.student }}-${{ github.run_id }}
+          name: coverage-${{ steps.who.outputs.student }}-${{ github.run_id }}
           retention-days: 7
           if-no-files-found: ignore
-          # Reports and payloads only — never the swapped source files.
           path: |
             app/coverage.json
             app/coverage_payload.json
-            app/scores_payload.json
-            app/diagnostics.json
             app/baseline/
-            app/break-results/
