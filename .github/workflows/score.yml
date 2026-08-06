@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 20
     env:
       PYTHONDONTWRITEBYTECODE: '1'
-      PROJECT_ID: ${{ vars.PROJECT_ID || 'wit-workshop-2026' }}
+      PROJECT_ID: ${{ vars.PROJECT_ID || 'default' }}
       BRANCH_NAME: ${{ github.ref_name }}
       STUDENT_OVERRIDE: ${{ github.event.inputs.student }}
       FALLBACK_ACTOR: ${{ github.actor }}
@@ -155,10 +155,12 @@ jobs:
           API_KEY: ${{ secrets.LEADERBOARD_API_KEY }}
           LEADERBOARD_URL: ${{ secrets.LEADERBOARD_URL }}
           STUDENT: ${{ steps.who.outputs.student }}
+          GITHUB_USERNAME: ${{ github.actor }}
         run: |
           set -uo pipefail
           python3 ../leaderboard/pipeline/extract_coverage.py \
-            coverage.json "$STUDENT" "$PROJECT_ID" --allow-missing > coverage_payload.json
+            coverage.json "$STUDENT" "$PROJECT_ID" --allow-missing \
+            --github-username "$GITHUB_USERNAME" > coverage_payload.json
           curl --fail-with-body --silent --show-error --retry 3 --retry-delay 2 \
             -X POST "$LEADERBOARD_URL/coverage" \
             -H "Authorization: Bearer $API_KEY" \
@@ -223,6 +225,7 @@ jobs:
           API_KEY: ${{ secrets.LEADERBOARD_API_KEY }}
           LEADERBOARD_URL: ${{ secrets.LEADERBOARD_URL }}
           STUDENT: ${{ steps.who.outputs.student }}
+          GITHUB_USERNAME: ${{ github.actor }}
         run: |
           set -uo pipefail
           # stderr carries the running total and the names of any unscoreable
@@ -233,6 +236,7 @@ jobs:
             break-results/ "$STUDENT" "$PROJECT_ID" \
             --baseline-dir baseline/ \
             --diagnostics diagnostics.json \
+            --github-username "$GITHUB_USERNAME" \
             > scores_payload.json 2> aggregate.log \
             || { echo "::error::aggregate_results failed"; exit 1; }
           curl --fail-with-body --silent --show-error --retry 3 --retry-delay 2 \
