@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 20
     env:
       PYTHONDONTWRITEBYTECODE: '1'
-      PROJECT_ID: ${{ vars.PROJECT_ID || 'wit-workshop-2026' }}
+      PROJECT_ID: ${{ vars.PROJECT_ID || 'default' }}
       BRANCH_NAME: ${{ github.ref_name }}
       STUDENT_OVERRIDE: ${{ github.event.inputs.student }}
       FALLBACK_ACTOR: ${{ github.actor }}
