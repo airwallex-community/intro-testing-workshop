@@ -162,7 +162,7 @@ jobs:
             coverage.json "$STUDENT" "$PROJECT_ID" --allow-missing \
             --github-username "$GITHUB_USERNAME" > coverage_payload.json
           curl --fail-with-body --silent --show-error --retry 3 --retry-delay 2 \
-            -X POST "$LEADERBOARD_URL/coverage" \
+            -X POST "$LEADERBOARD_URL/api/v1/coverage" \
             -H "Authorization: Bearer $API_KEY" \
             -H "Content-Type: application/json" \
             -d @coverage_payload.json
@@ -240,7 +240,7 @@ jobs:
             > scores_payload.json 2> aggregate.log \
             || { echo "::error::aggregate_results failed"; exit 1; }
           curl --fail-with-body --silent --show-error --retry 3 --retry-delay 2 \
-            -X POST "$LEADERBOARD_URL/scores" \
+            -X POST "$LEADERBOARD_URL/api/v1/scores" \
             -H "Authorization: Bearer $API_KEY" \
             -H "Content-Type: application/json" \
             -d @scores_payload.json
