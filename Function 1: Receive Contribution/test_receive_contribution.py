@@ -12,7 +12,7 @@ from receive_contribution import receive_contribution
 class TestReceiveContribution:
 
     def test_deposit_into_account_with_existing_balance(self):
-        assert receive_contribution(100, 50) == 150
+        assert False
 
     def test_deposit_into_account_with_zero_balance(self):
         pass
