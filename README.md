@@ -20,15 +20,22 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Make a branch named after yourself
+### Set your name
 
-```bash
-git checkout -b ada-lovelace
+Open `student.yaml` in the repo root and fill in your name — this is what
+appears on the leaderboard:
+
+```yaml
+name: "Ada Lovelace"
+project: ""          # leave blank unless told otherwise
 ```
 
-**Your branch name is your name on the leaderboard.** Use something you'll
-recognise on the projector — `firstname-lastname` is ideal. Don't use
-`main`, `master`, or `feature-branch-1`; those are ignored and won't be scored.
+Then create a branch and push. Any branch name works as long as it is not
+`main`, `master`, or `feature-branch-1`:
+
+```bash
+git checkout -b my-branch
+```
 
 ## Writing the tests
 
