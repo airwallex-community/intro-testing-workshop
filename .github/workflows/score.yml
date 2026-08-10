@@ -44,15 +44,54 @@ jobs:
       FALLBACK_ACTOR: ${{ github.actor }}
 
     steps:
+      - name: Check out the student's work
+        uses: actions/checkout@v4
+        with:
+          path: app
+
       - name: Resolve student name
         id: who
         run: |
           set -uo pipefail
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import os, re, sys
+          from pathlib import Path
 
-          raw = (os.environ.get("STUDENT_OVERRIDE") or "").strip()
-          source = "workflow_dispatch input"
+          def read_student_yaml():
+              """Read name and project from student.yaml if it exists."""
+              try:
+                  import yaml
+              except ImportError:
+                  pass
+              else:
+                  p = Path("app/student.yaml")
+                  if p.exists():
+                      data = yaml.safe_load(p.read_text()) or {}
+                      return (data.get("name") or "").strip(), (data.get("project") or "").strip()
+                  return "", ""
+
+              p = Path("app/student.yaml")
+              if not p.exists():
+                  return "", ""
+              name_val = ""
+              project_val = ""
+              for line in p.read_text().splitlines():
+                  line = line.strip()
+                  if line.startswith("#") or not line:
+                      continue
+                  if line.startswith("name:"):
+                      name_val = line.split(":", 1)[1].strip().strip("\"'")
+                  elif line.startswith("project:"):
+                      project_val = line.split(":", 1)[1].strip().strip("\"'")
+              return name_val, project_val
+
+          yaml_name, yaml_project = read_student_yaml()
+
+          raw = yaml_name
+          source = "student.yaml"
+          if not raw:
+              raw = (os.environ.get("STUDENT_OVERRIDE") or "").strip()
+              source = "workflow_dispatch input"
           if not raw:
               raw = (os.environ.get("BRANCH_NAME") or "").strip()
               source = "branch name"
@@ -63,6 +102,8 @@ jobs:
           name = raw.lower().replace("/", "-")
           name = re.sub(r"[^a-z0-9._-]+", "-", name).strip("-")
 
+          project = yaml_project or os.environ.get("PROJECT_ID") or ""
+
           RESERVED = {
               "", "main", "master", "head", "develop",
               "feature-branch-1", "feature-branch-2", "feature-branch-3",
@@ -72,6 +113,8 @@ jobs:
           print(f"student={name}")
           print(f"source={source}")
           print(f"skip={'true' if skip else 'false'}")
+          if project:
+              print(f"project={project}")
           print(f"Resolved student '{name}' from {source}", file=sys.stderr)
           PY
 
@@ -81,16 +124,10 @@ jobs:
           {
             echo "### Scoring skipped"
             echo
-            echo "Branch \`$BRANCH_NAME\` is a reserved name, so this run was not scored."
-            echo "Push to a branch named after yourself (e.g. \`ada-lovelace\`) — your"
-            echo "branch name is the name shown on the leaderboard."
+            echo "Your name could not be resolved. Either:"
+            echo "- Open \`student.yaml\` and fill in your name, or"
+            echo "- Push to a branch named after yourself (e.g. \`ada-lovelace\`)"
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Check out the student's work
-        if: steps.who.outputs.skip != 'true'
-        uses: actions/checkout@v4
-        with:
-          path: app
 
       # The transform scripts live with the API contract they target, so the
       # payload shape and the endpoint schema always change together. Pinned to
@@ -155,6 +192,7 @@ jobs:
           API_KEY: ${{ secrets.LEADERBOARD_API_KEY }}
           LEADERBOARD_URL: ${{ secrets.LEADERBOARD_URL }}
           STUDENT: ${{ steps.who.outputs.student }}
+          PROJECT_ID: ${{ steps.who.outputs.project || env.PROJECT_ID }}
           GITHUB_USERNAME: ${{ github.actor }}
         run: |
           set -uo pipefail
@@ -225,13 +263,10 @@ jobs:
           API_KEY: ${{ secrets.LEADERBOARD_API_KEY }}
           LEADERBOARD_URL: ${{ secrets.LEADERBOARD_URL }}
           STUDENT: ${{ steps.who.outputs.student }}
+          PROJECT_ID: ${{ steps.who.outputs.project || env.PROJECT_ID }}
           GITHUB_USERNAME: ${{ github.actor }}
         run: |
           set -uo pipefail
-          # stderr carries the running total and the names of any unscoreable
-          # versions. Both are answers, and this log is readable by the student,
-          # so it goes to a file that is never uploaded. The student gets the
-          # redacted step summary; organisers read the API after the reveal.
           python3 ../leaderboard/pipeline/aggregate_results.py \
             break-results/ "$STUDENT" "$PROJECT_ID" \
             --baseline-dir baseline/ \
