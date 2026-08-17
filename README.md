@@ -82,10 +82,10 @@ Push as often as you like — only your most recent push counts.
 ### Reading your results
 
 Open the **Actions** tab, click your run, and read the summary. It shows your
-coverage, how many broken versions you caught per function, and — most usefully —
-whether any of your tests **fail against the working code**. A test that fails
-against the correct implementation is a broken test: it can never detect
-anything, so it scores nothing. Fix those first.
+line coverage across all the functions to test. This indicates if you've covered all 
+the possible code paths - you should be aiming for 100% code coverage. If any of your
+tests fail against the correct code available in the repository, you will get 0 line 
+coverage for that function.
 
 ## Two things worth knowing
 
