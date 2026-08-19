@@ -9,11 +9,16 @@ from calculate_interest import calculate_interest
 # =============================================================================
 
 class TestCalculateInterest:
-    balance = 1000
-    rate = 5
-    years = 3
-
-    interest = calculate_interest(balance, rate, years)
-    assert interest == 150.0
-    pass
+    def test_calculate_interest_with_valid_inputs(self):
+        # Arrange
+        balance = 1000
+        rate = 5
+        years = 2
+        expected_interest = 100
+        
+        # Act
+        interest = calculate_interest(balance, rate, years)
+        
+        # Assert
+        assert interest == expected_interest
 
