@@ -19,14 +19,13 @@ class TestCategoriseTransaction:
         result = categorise_transaction(0)
         assert result == "zero"
 
+    def test_successfully_adds_calculate_interest_with_zero_balance(self):
+        result = categorise_transaction(200)
+        assert result == "credit"
 
     def test_successfully_adds_calculate_interest_with_zero_balance(self):
-            result = categorise_transaction(200)
-            assert result == "credit"
-
-    def test_successfully_adds_calculate_interest_with_zero_balance(self):
-            result = categorise_transaction(10001)
-            assert result == "large credit"
+        result = categorise_transaction(10001)
+        assert result == "large credit"
 
     def test_successfully_adds_calculate_interest_with_zero_balance(self):
         result = categorise_transaction(-10001)
