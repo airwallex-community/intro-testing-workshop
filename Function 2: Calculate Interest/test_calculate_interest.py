@@ -28,6 +28,14 @@ class TestCalculateInterest:
     def test_fails_to_calculate_interest_when_rate_is_negative(self):
         with pytest.raises(ValueError):
             calculate_interest(50, 3, -10)
+    
+    def test_fails_to_calculate_interest_when_rate_is_negative(self):
+            with pytest.raises(ValueError):
+                calculate_interest(-2, 3, -10)
+
+    def test_fails_to_calculate_interest_when_rate_is_negative(self):
+            with pytest.raises(ValueError):
+                calculate_interest(3, -2, 10)
 
     #balance: Must be >= 0
     # rate: Must be between 0 and 100 inclusive
