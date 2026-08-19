@@ -21,3 +21,7 @@ def receive_contribution(current_balance: int, contribution: int) -> int:
     if contribution <= 0:
         raise ValueError("Contribution must be positive")
     return current_balance + contribution
+
+    # current_balance must be >= 0
+    # Contribution > 0
+    # current_balance + contribution > 0

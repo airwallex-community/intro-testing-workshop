@@ -25,3 +25,11 @@ def calculate_interest(balance: float, rate: float, years: int) -> float:
     if years <= 0:
         raise ValueError("Years must be a positive integer")
     return round(balance * (rate / 100) * years, 2)
+
+    # balance: Must be >= 0
+    # rate: Must be between 0 and 100 inclusive
+    # years: Must be > 0
+
+
+result = calculate_interest(0, 85, 2)
+print(result)
