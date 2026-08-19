@@ -12,7 +12,7 @@ def categorise_transaction(amount) -> str:
 
     Returns:
         One of: "zero", "credit", "debit", "large credit", "large debit".
-
+git checkout -b my-branch
     Raises:
         TypeError: If amount is not a numeric type (int or float).
     """
