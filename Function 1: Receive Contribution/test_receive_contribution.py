@@ -16,6 +16,7 @@ class TestReceiveContribution:
         current_balance = 100
         contribution = 0
         expected_balance = 100
+        
         # Act
         new_balance = receive_contribution(current_balance, contribution)
         # Assert
