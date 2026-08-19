@@ -9,4 +9,10 @@ from categorise_transaction import categorise_transaction
 # =============================================================================
 
 class TestCategoriseTransaction:
-    pass
+     def test_fails_to_calculate_interest_when_rate_is_negative(self):
+            with pytest.raises(TypeError):
+                calculate_interest("Hello")
+
+    def test_fails_to_calculate_interest_when_rate_is_negative(self):
+            with pytest.raises(TypeError):
+                calculate_interest(True)
