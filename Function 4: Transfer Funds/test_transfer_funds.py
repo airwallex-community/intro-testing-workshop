@@ -10,5 +10,10 @@ from transfer_funds import transfer_funds
 
 class TestTransferFunds:
     def test_fails_to_calculate_interest_when_rate_is_negative(self):
-           with pytest.raises(TypeError):
+           with pytest.raises(ValueError):
                transfer_funds({"name": "Alice", "balance": 100000}, {"name": "KJK", "balance": 100000}, -1000)
+
+    def test_fails_to_calculate_interest_when_rate_is_negative(self):
+               with pytest.raises(ValueError):
+                   transfer_funds({"name": "Alice", "balance": 50001}, {"name": "KJK", "balance": 100000}, 50001)
+
