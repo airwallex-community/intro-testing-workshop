@@ -12,16 +12,21 @@ from receive_contribution import receive_contribution
 class TestReceiveContribution:
 
     def test_successfully_adds_deposit_to_account_with_existing_balance(self):
-        pass
+        result = receive_contribution(100, 50)
+        assert result == 150
 
     def test_successfully_adds_deposit_to_account_with_zero_balance(self):
-        pass
+        result = receive_contribution(0, 50)
+        assert result == 50
 
     def test_fails_to_add_deposit_when_balance_is_negative(self):
-        pass
+        with pytest.raises(ValueError, match="Current balance cannot be negative"):
+            receive_contribution(-10, 50)
 
     def test_fails_to_add_deposit_when_contribution_is_zero(self):
-        pass
+        with pytest.raises(ValueError, match="Contribution must be positive"):
+            receive_contribution(100, 0)
 
     def test_fails_to_add_deposit_when_contribution_is_negative(self):
-        pass
+        with pytest.raises(ValueError, match="Contribution must be positive"):
+            receive_contribution(100, -25)
