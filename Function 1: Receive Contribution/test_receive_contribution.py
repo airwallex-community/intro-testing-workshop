@@ -42,10 +42,10 @@ class TestReceiveContribution:
 
     def test_fails_to_add_deposit_when_contribution_is_zero(self):
         if contribution == 0: 
-            raise ValueError("Contribution cannot be zero")
+            pytest.praise(Error, match="Contribution cannot be zero")
         pass
 
     def test_fails_to_add_deposit_when_contribution_is_negative(self):
         if contribution < 0: 
-            raise ValueError("Contribution cannot be negative")
+            pytest.raise(Error, match="Contribution cannot be negative")
         pass
