@@ -12,18 +12,26 @@ from receive_contribution import receive_contribution
 class TestReceiveContribution:
 
     def test_successfully_adds_deposit_to_account_with_existing_balance(self):
-        
+        current_balance = 100
+        contribution = 0
         pass
 
     def test_successfully_adds_deposit_to_account_with_zero_balance(self):
-
+        current_balance = 0
+        contribution = 50
         pass
 
     def test_fails_to_add_deposit_when_balance_is_negative(self):
+        current_balance = -10
+        contribution = 50
         pass
 
     def test_fails_to_add_deposit_when_contribution_is_zero(self):
+        current_balance = 100
+        contribution = -1
         pass
 
     def test_fails_to_add_deposit_when_contribution_is_negative(self):
+        current_balance = 100
+        contribution = -50
         pass
