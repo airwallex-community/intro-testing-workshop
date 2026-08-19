@@ -44,12 +44,12 @@ file with stubs to fill in:
 
 | # | Directory | Function |
 |---|---|---|
-| 1 | `Function 1: Receive Contribution/` | `receive_contribution` |
-| 2 | `Function 2: Calculate Interest/` | `calculate_interest` |
-| 3 | `Function 3: Categorise Transaction/` | `categorise_transaction` |
-| 4 | `Function 4: Transfer Funds/` | `transfer_funds` |
-| 5 | `Function 5: Apply Transaction/` | `apply_transaction` |
-| 6 | `Function 6: Process Batch Transactions/` | `process_batch_transactions` |
+| 1 | `Function 1 - Receive Contribution/` | `receive_contribution` |
+| 2 | `Function 2 - Calculate Interest/` | `calculate_interest` |
+| 3 | `Function 3 - Categorise Transaction/` | `categorise_transaction` |
+| 4 | `Function 4 - Transfer Funds/` | `transfer_funds` |
+| 5 | `Function 5 - Apply Transaction/` | `apply_transaction` |
+| 6 | `Function 6 - Process Batch Transactions/` | `process_batch_transactions` |
 
 **Read the docstring first.** It is the specification: it tells you the valid
 input ranges, what gets returned, and which errors are raised. Every broken
@@ -59,7 +59,7 @@ Run your tests from the repo root:
 
 ```bash
 pytest                                        # everything
-pytest "Function 1: Receive Contribution/"    # one function
+pytest "Function 1 - Receive Contribution/"   # one function
 pytest --cov                                  # with coverage
 ```
 
@@ -102,5 +102,6 @@ broken versions are exactly that kind of off-by-one.
 **`ModuleNotFoundError`** — run `pytest` from the repo root, not from inside a
 function directory. `pytest.ini` puts the function directories on the import path.
 
-**Windows: clone fails** — the directory names contain a colon, which Windows
-does not allow in filenames. Use WSL, a Mac or Linux machine, or a Codespace.
+**Windows: clone fails** — older revisions used colons in directory names, which
+Windows does not allow. Rename each colon to ` -` in the Git index, or use WSL,
+a Mac or Linux machine, or a Codespace.
