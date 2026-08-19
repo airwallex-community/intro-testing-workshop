@@ -11,8 +11,9 @@ from categorise_transaction import categorise_transaction
 class TestCategoriseTransaction:
      def test_fails_to_calculate_interest_when_rate_is_negative(self):
             with pytest.raises(TypeError):
-                calculate_interest("Hello")
+                  categorise_transaction("Hello")
 
     def test_fails_to_calculate_interest_when_rate_is_negative(self):
             with pytest.raises(TypeError):
-                calculate_interest(True)
+                   categorise_transaction(True)
+            
