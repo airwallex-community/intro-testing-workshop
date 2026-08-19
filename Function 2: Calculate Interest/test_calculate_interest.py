@@ -22,10 +22,12 @@ class TestCalculateInterest:
             calculate_interest(-10, 2, 3)
 
     def test_fails_to_calculate_interest_when_years_is_zero(self):
-        pass
+        with pytest.raises(ValueError):
+            calculate_interest(50, 0, 3)
 
-    def test_fails_to_add_deposit_when_contribution_is_negative(self):
-        pass
+    def test_fails_to_calculate_interest_when_rate_is_negative(self):
+        with pytest.raises(ValueError):
+            calculate_interest(50, 3, -10)
 
     #balance: Must be >= 0
     # rate: Must be between 0 and 100 inclusive
