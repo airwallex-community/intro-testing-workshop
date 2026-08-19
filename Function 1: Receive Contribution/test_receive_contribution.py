@@ -11,17 +11,17 @@ from receive_contribution import receive_contribution
 
 class TestReceiveContribution:
 
-    def successfully_adds_deposit_to_account_with_existing_balance(self):
+    def test_successfully_adds_deposit_to_account_with_existing_balance(self):
         pass
 
-    def successfully_adds_deposit_to_account_with_zero_balance(self):
+    def test_successfully_adds_deposit_to_account_with_zero_balance(self):
         pass
 
-    def fails_to_add_deposit_when_balance_is_negative(self):
+    def test_fails_to_add_deposit_when_balance_is_negative(self):
         pass
 
-    def fails_to_add_deposit_when_contribution_is_zero(self):
+    def test_fails_to_add_deposit_when_contribution_is_zero(self):
         pass
 
-    def fails_to_add_deposit_when_contribution_is_negative(self):
+    def test_fails_to_add_deposit_when_contribution_is_negative(self):
         pass
