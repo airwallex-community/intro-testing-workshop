@@ -12,5 +12,8 @@ class TestCalculateInterest:
     balance = 1000
     rate = 5
     years = 3
-    
+
+    interest = calculate_interest(balance, rate, years)
+    assert interest == 150.0
     pass
+
