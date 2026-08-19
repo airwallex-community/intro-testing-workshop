@@ -9,4 +9,7 @@ from calculate_interest import calculate_interest
 # =============================================================================
 
 class TestCalculateInterest:
+    interest = balance * (rate / 100) * years
     pass
+
+class 
