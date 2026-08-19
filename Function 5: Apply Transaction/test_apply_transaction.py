@@ -54,4 +54,4 @@ class TestApplyTransaction:
 
     def test_fails_when_amount_is_zero(self):
         with pytest.raises(ValueError, match="Amount must not be zero"):
-            apply_transaction("txn-4", 1000, 0)
+            apply_transaction("txn-4", 1000,0)
