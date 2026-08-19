@@ -41,6 +41,7 @@ class TestReceiveContribution:
         current_balance = 100
         contribution = 0
 
+        # with pytest.raises(ValueError)
         pass
 
     def test_fails_to_add_deposit_when_contribution_is_negative(self):
